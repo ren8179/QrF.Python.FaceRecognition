@@ -2,13 +2,15 @@
 
 from flask import Flask, request, redirect, url_for,send_file,send_from_directory,render_template
 from werkzeug import secure_filename
+from PIL import Image
+import re
 import dlib
 import cv2
 import os
 from io import BytesIO
 
 CURRENT_PATH = os.getcwd()  # 获取当前路径
-UPLOAD_FOLDER = CURRENT_PATH + '\\uploadimgs'
+UPLOAD_FOLDER = CURRENT_PATH + '\\img_upload'
 NEWPATH=CURRENT_PATH + "\\img_dlib"
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
@@ -27,26 +29,46 @@ def allowed_file(filename):
 def upload_file():
     if request.method == 'POST':
         file = request.files['file']
+        hantype=request.form['hantype']
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             filepath=os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
-            img = cv2.imread(filepath)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            dets = detector(gray, 1)
             imgs = []
-            for index, face in enumerate(dets):
-                left = face.left()
-                top = face.top()
-                right = face.right()
-                bottom = face.bottom()
-                crop_img = img[top:bottom, left:right]
-                if index==0:
-                    newimgpath=filename
-                else:
-                    newimgpath=str(index+1)+filename
-                cv2.imwrite(NEWPATH+"/"+newimgpath, crop_img) # 框出人脸
-                imgs.append(newimgpath)
+            if hantype=='face':
+                img = cv2.imread(filepath)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                dets = detector(gray, 1)
+                for index, face in enumerate(dets):
+                    left = face.left()
+                    top = face.top()
+                    right = face.right()
+                    bottom = face.bottom()
+                    crop_img = img[top:bottom, left:right]
+                    if index==0:
+                        newimgpath=filename
+                    else:
+                        newimgpath=str(index+1)+filename
+                    cv2.imwrite(NEWPATH+"/"+newimgpath, crop_img) # 框出人脸
+                    imgs.append(newimgpath)
+            if hantype=='imgr':
+                MIN_W=640.0
+                MAX_W=2016.0
+                MIN_H=480.0
+                MAX_H=3840.0
+                STA_W=1024.0
+                STA_H=768.0
+                img=Image.open(filepath)
+                w,h=img.size
+                if w<MIN_W or w>MAX_W :
+                    h=STA_W*h/w
+                    w=STA_W
+                if h<MIN_H or h>MAX_H:
+                    w=STA_H*w/h
+                    h=STA_H
+                out = img.resize((int(w),int(h)),Image.ANTIALIAS)
+                out.save(NEWPATH+"/"+filename)
+                imgs.append(filename)
             #return redirect(url_for('uploaded_file', filename=filename))
             return render_template('list.html', imgs=imgs)
     return '''
@@ -54,8 +76,10 @@ def upload_file():
     <title>上传照片</title>
     <h1>请上传一张包含人像的照片</h1>
     <form action="" method=post enctype=multipart/form-data>
+    <p><input type=text name=hantype value=imgr> face 人脸识别 / imgr 图片压缩</p>
+    <p></p>
       <p><input type=file name=file>
-         <input type=submit value=点击上传>
+         <input type=submit value=点击上传></p>
     </form>
     '''
 @app.route('/uploads/<filename>')
@@ -96,5 +120,5 @@ def _serve_pil_image(pil_img):
     return send_file(img_io, mimetype='image/png', cache_timeout=0)
 
 if __name__ == '__main__':
-    #app.run('172.16.40.235',81)
-    app.run('127.0.0.1',81)
+    app.run('172.16.40.235',81)
+    #app.run('127.0.0.1',81)
