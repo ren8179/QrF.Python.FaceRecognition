@@ -21,3 +21,11 @@ Python 人脸识别技术
 
 app.run('127.0.0.1',81) 这里配置服务器的访问IP及端口
 
+### 使用以及借鉴的开源项目清单
+
+
+> [faceai](https://github.com/vipstone/faceai) 一款优秀的人脸检测、人脸识别、视频识别、文字识别等智能AI项目。
+
+> [flask](https://github.com/pallets/flask) 一个 Python 实现的 Web 开发微框架
+
+> [opencv](https://github.com/opencv/opencv) 一个跨平台的计算机视觉处理库
